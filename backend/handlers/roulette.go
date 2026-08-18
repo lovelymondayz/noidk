@@ -3,15 +3,20 @@ package handlers
 import (
 	"math/rand"
 	"net/http"
-	"time"
+	"sort"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lovelymondayz/noidk/backend/repository"
 )
 
-type RouletteHandler struct{}
+type RouletteHandler struct {
+	repo *repository.RouletteRepository
+}
 
 func NewRouletteHandler() *RouletteHandler {
-	return &RouletteHandler{}
+	return &RouletteHandler{
+		repo: repository.NewRouletteRepository(),
+	}
 }
 
 func (h *RouletteHandler) Spin(c *gin.Context) {
@@ -22,7 +27,6 @@ func (h *RouletteHandler) Spin(c *gin.Context) {
 		Cuisine    *string  `json:"cuisine"`
 		Latitude   *float64 `json:"latitude"`
 		Longitude  *float64 `json:"longitude"`
-		Vibe       *string  `json:"vibe"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -30,27 +34,136 @@ func (h *RouletteHandler) Spin(c *gin.Context) {
 		return
 	}
 
-	// TODO: Query restaurants from DB, apply cooldown/diversity logic, score them
-	// For now, return a weighted mock response
-	rand.Seed(time.Now().UnixNano())
-
-	mockRestaurants := []gin.H{
-		{"id": "1", "name": "Bakmi Orang Ketiga", "cuisine": "Chinese", "rating": 4.7, "priceRange": 1, "distanceKm": 2.3, "reasons": []string{"🔥 Trending near you", "❤️ You haven't tried it", "💸 Within your budget", "📍 Only 2.3 km away", "🍜 You haven't had noodles in 12 days"}},
-		{"id": "2", "name": "Kopi & Co.", "cuisine": "Coffee", "rating": 4.8, "priceRange": 2, "distanceKm": 1.5, "reasons": []string{"☕ Perfect for a chill vibe", "⭐ Highly rated by community", "📍 Only 1.5 km away"}},
-		{"id": "3", "name": "Sushi Kaze", "cuisine": "Japanese", "rating": 4.9, "priceRange": 3, "distanceKm": 3.2, "reasons": []string{"🍣 You haven't had Japanese in 10 days", "✨ Great for date night", "🔥 Featured on YouTube"}},
+	lat := 0.0
+	lon := 0.0
+	if req.Latitude != nil {
+		lat = *req.Latitude
+	}
+	if req.Longitude != nil {
+		lon = *req.Longitude
 	}
 
-	result := mockRestaurants[rand.Intn(len(mockRestaurants))]
+	budget := 0
+	if req.Budget != nil {
+		budget = *req.Budget
+	}
+
+	distanceKm := 0.0
+	if req.DistanceKm != nil {
+		distanceKm = *req.DistanceKm
+	}
+
+	mood := ""
+	if req.Mood != nil {
+		mood = *req.Mood
+	}
+
+	cuisine := ""
+	if req.Cuisine != nil {
+		cuisine = *req.Cuisine
+	}
+
+	restaurants, err := h.repo.GetScoredRestaurants(c.Request.Context(), lat, lon, budget, distanceKm, mood, cuisine)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
+	if len(restaurants) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"data": gin.H{
+				"message": "No restaurants found matching your criteria. Try adjusting your filters.",
+			},
+		})
+		return
+	}
+
+	// Sort by score descending
+	sort.Slice(restaurants, func(i, j int) bool {
+		return restaurants[i]["score"].(float64) > restaurants[j]["score"].(float64)
+	})
+
+	// Pick from top 3 with some randomness
+	topN := 3
+	if len(restaurants) < topN {
+		topN = len(restaurants)
+	}
+
+	// Weighted random pick from top N
+	weights := make([]float64, topN)
+	for i := 0; i < topN; i++ {
+		weights[i] = restaurants[i]["score"].(float64)
+	}
+
+	totalWeight := 0.0
+	for _, w := range weights {
+		totalWeight += w
+	}
+
+	r := rand.Float64() * totalWeight
+	cumulative := 0.0
+	picked := 0
+	for i, w := range weights {
+		cumulative += w
+		if r <= cumulative {
+			picked = i
+			break
+		}
+	}
+
+	result := restaurants[picked]
+	result["reasons"] = generateReasons(result, req)
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": result,
 	})
 }
 
+func generateReasons(restaurant map[string]interface{}, req struct {
+	Budget     *int     `json:"budget"`
+	DistanceKm *float64 `json:"distanceKm"`
+	Mood       *string  `json:"mood"`
+	Cuisine    *string  `json:"cuisine"`
+	Latitude   *float64 `json:"latitude"`
+	Longitude  *float64 `json:"longitude"`
+}) []string {
+	reasons := []string{}
+
+	if restaurant["rating"].(float64) >= 4.5 {
+		reasons = append(reasons, "⭐ Highly rated by community")
+	}
+
+	if restaurant["reviewCount"].(int) > 50 {
+		reasons = append(reasons, "🔥 Popular spot")
+	}
+
+	if dist, ok := restaurant["distanceKm"].(float64); ok {
+		if dist < 2.0 {
+			reasons = append(reasons, "📍 Very close to you")
+		} else if dist < 5.0 {
+			reasons = append(reasons, "📍 Within your range")
+		}
+	}
+
+	if restaurant["priceRange"].(int) <= 2 {
+		reasons = append(reasons, "💸 Budget-friendly")
+	}
+
+	if cuisine, ok := restaurant["cuisine"].(string); ok {
+		reasons = append(reasons, "🍽️ "+cuisine+" cuisine")
+	}
+
+	if len(reasons) == 0 {
+		reasons = append(reasons, "✨ Recommended for you")
+	}
+
+	return reasons
+}
+
 func (h *RouletteHandler) DontMakeMeChoose(c *gin.Context) {
 	var req struct {
-		Vibe    string `json:"vibe" binding:"required"`
-		Budget  int    `json:"budget" binding:"required"`
+		Vibe     string `json:"vibe" binding:"required"`
+		Budget   int    `json:"budget" binding:"required"`
 		Distance int    `json:"distance" binding:"required"`
 	}
 

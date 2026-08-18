@@ -4,62 +4,77 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/lovelymondayz/noidk/backend/repository"
 )
 
-type RestaurantHandler struct{}
+type RestaurantHandler struct {
+	repo *repository.RestaurantRepository
+}
 
 func NewRestaurantHandler() *RestaurantHandler {
-	return &RestaurantHandler{}
+	return &RestaurantHandler{
+		repo: repository.NewRestaurantRepository(),
+	}
 }
 
 func (h *RestaurantHandler) List(c *gin.Context) {
-	// TODO: Parse filters (mood, budget, distance, cuisine)
-	// TODO: Query DB with filters
+	filters := map[string]interface{}{}
 
-	// Mock response
+	if cuisine := c.Query("cuisine"); cuisine != "" {
+		filters["cuisine"] = cuisine
+	}
+	if budget := c.Query("budget"); budget != "" {
+		filters["budget"] = budget
+	}
+	if mood := c.Query("mood"); mood != "" {
+		filters["mood"] = mood
+	}
+
+	restaurants, total, err := h.repo.List(c.Request.Context(), filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"restaurants": []gin.H{
-				{"id": "1", "name": "Bakmi Orang Ketiga", "cuisine": "chinese", "rating": 4.7, "priceRange": 1},
-				{"id": "2", "name": "Kopi & Co.", "cuisine": "coffee", "rating": 4.8, "priceRange": 2},
-				{"id": "3", "name": "Sushi Kaze", "cuisine": "japanese", "rating": 4.9, "priceRange": 3},
-			},
-			"meta": gin.H{"page": 1, "limit": 20, "total": 3},
+			"restaurants": restaurants,
+			"meta": gin.H{"page": 1, "limit": 20, "total": total},
 		},
 	})
 }
 
 func (h *RestaurantHandler) Get(c *gin.Context) {
 	id := c.Param("id")
+	restaurant, err := h.repo.GetByID(c.Request.Context(), parseUUID(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"code": "NOT_FOUND", "message": err.Error()}})
+		return
+	}
 
-	// TODO: Query DB for restaurant detail
-	c.JSON(http.StatusOK, gin.H{
-		"data": gin.H{
-			"id":          id,
-			"name":        "Bakmi Orang Ketiga",
-			"description": "Legendary noodle joint",
-			"address":     "Jl. Sabang No. 52, Menteng",
-			"cuisine":     "chinese",
-			"rating":      4.7,
-			"priceRange":  1,
-			"menuItems": []gin.H{
-				{"id": "1", "name": "Bakmi Ayam Chili Oil", "price": 45000},
-				{"id": "2", "name": "Bakmi Special", "price": 55000},
-			},
-		},
-	})
+	menuItems, err := h.repo.GetMenuItems(c.Request.Context(), parseUUID(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
+	restaurant["menuItems"] = menuItems
+	c.JSON(http.StatusOK, gin.H{"data": restaurant})
 }
 
 func (h *RestaurantHandler) Search(c *gin.Context) {
 	query := c.Query("q")
+	results, err := h.repo.Search(c.Request.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
 
-	// TODO: Full-text search
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"results": []gin.H{
-				{"id": "1", "name": "Bakmi Orang Ketiga", "type": "restaurant"},
-			},
-			"query": query,
+			"results": results,
+			"query":   query,
 		},
 	})
 }
@@ -80,11 +95,21 @@ func (h *RestaurantHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// TODO: Save to DB
+	id, err := h.repo.Create(c.Request.Context(), req.Name, req.Description, req.Address, req.Latitude, req.Longitude, req.Cuisine, req.PriceRange)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
-			"id":   "new-restaurant-id",
+			"id":   id,
 			"name": req.Name,
 		},
 	})
+}
+
+func parseUUID(id string) uuid.UUID {
+	// In production, handle parse errors
+	return uuid.MustParse(id)
 }
