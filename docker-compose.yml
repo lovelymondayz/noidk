@@ -12,6 +12,9 @@ services:
       - "5439:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backend/db/migrations/001_init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./backend/db/seed/001_data.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      - ./backend/db/seed/002_social.sql:/docker-entrypoint-initdb.d/03-social.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noidk -d noidk"]
       interval: 5s

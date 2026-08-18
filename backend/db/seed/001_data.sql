@@ -110,5 +110,5 @@ INSERT INTO menu_items (restaurant_id, name, description, price, is_popular) VAL
 ((SELECT id FROM restaurants WHERE name = 'Fresh Bowl'), 'Poke Bowl', 'Fresh tuna poke with rice and vegetables', 68000, true),
 ((SELECT id FROM restaurants WHERE name = 'Fresh Bowl'), 'Green Smoothie', 'Spinach, banana, and mango blend', 45000, false),
 ((SELECT id FROM restaurants WHERE name = 'Sate Khas Senayan'), 'Sate Ayam (10 tusuk)', 'Chicken satay with kecap manis', 58000, true),
-((SELECT id FROM restaurants WHERE name = 'Sate Khas Senayan'), 'Sate Kambing (10 tusuk'), 'Lamb satay with kecap manis', 88000, true),
-((SELECT id FROM restaurants WHERE name = 'Sate Khas Senayan'), 'Sate Padang (10 tusuk'), 'Padang-style beef satay', 78000, false);
+((SELECT id FROM restaurants WHERE name = 'Sate Khas Senayan'), 'Sate Kambing (10 tusuk)', 'Lamb satay with kecap manis', 88000, true),
+((SELECT id FROM restaurants WHERE name = 'Sate Khas Senayan'), 'Sate Padang (10 tusuk)', 'Padang-style beef satay', 78000, false);
