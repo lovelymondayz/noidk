@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: noidkpassword
       POSTGRES_DB: noidk
     ports:
-      - "5436:5432"
+      - "5439:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -35,9 +35,6 @@ services:
       MAPS_PROVIDER: osm
       STORAGE_PROVIDER: local
       SEARCH_PROVIDER: postgres
-    volumes:
-      - ./backend:/app
-      - /app/tmp
     depends_on:
       db:
         condition: service_healthy
@@ -49,9 +46,6 @@ services:
       - "3005:3005"
     environment:
       VITE_API_URL: http://localhost:8085/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
 
