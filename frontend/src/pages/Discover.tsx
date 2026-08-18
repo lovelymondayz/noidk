@@ -1,15 +1,37 @@
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { getApi } from '../services/api'
+
+interface Post {
+  id: string
+  content: string
+  rating: number
+  createdAt: string
+  favoriteMenu: string
+  images: string[]
+  restaurant: {
+    id: string
+    name: string
+  }
+}
 
 export function Discover() {
-  const sections = [
-    { emoji: '🔥', title: 'Trending Near You', description: 'Restaurants getting attention' },
-    { emoji: '📱', title: 'TikTok Finds', description: 'Viral food spots' },
-    { emoji: '🎬', title: 'YouTube Finds', description: 'Creator recommendations' },
-    { emoji: '📸', title: 'Instagram Finds', description: 'Popular food locations' },
-    { emoji: '❤️', title: 'Community Favorites', description: 'Highly rated by NoIDK users' },
-    { emoji: '💎', title: 'Hidden Gems', description: 'Quality spots not yet mainstream' },
-    { emoji: '🆕', title: 'New Places', description: 'Recently opened restaurants' },
-  ]
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await getApi().get<{ data: { posts: Post[] } }>('/posts?limit=20')
+        setPosts(res.data.posts || [])
+      } catch (err) {
+        console.error('Failed to fetch posts:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPosts()
+  }, [])
 
   return (
     <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12">
@@ -29,23 +51,36 @@ export function Discover() {
         Let's see what NoIDK finds for us.
       </motion.p>
 
-      <div className="space-y-4">
-        {sections.map((section, i) => (
-          <motion.div
-            key={section.title}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 * i }}
-            className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4"
-          >
-            <span className="text-3xl">{section.emoji}</span>
-            <div>
-              <h3 className="font-bold text-gray-800">{section.title}</h3>
-              <p className="text-sm text-gray-500">{section.description}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center text-gray-400 py-8">Loading...</div>
+      ) : posts.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">No posts yet. Be the first!</div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post, i) => (
+            <motion.div
+              key={post.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              className="bg-white rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold text-gray-800">{post.restaurant.name}</span>
+                <span className="text-xs text-gray-400">• {new Date(post.createdAt).toLocaleDateString()}</span>
+              </div>
+              <p className="text-gray-700 text-sm mb-2">{post.content}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-orange-500">⭐</span>
+                <span className="font-bold text-orange-700 text-sm">{post.rating}</span>
+                {post.favoriteMenu && (
+                  <span className="text-xs text-gray-500">• {post.favoriteMenu}</span>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useFilterStore } from '../store/filterStore'
+import { getApi } from '../services/api'
 
 const MOODS = [
   { emoji: '🍜', label: 'Comfort', value: 'comfort' },
@@ -14,44 +15,49 @@ const MOODS = [
   { emoji: '🎲', label: 'Surprise', value: 'surprise' },
 ]
 
+interface SpinResult {
+  name: string
+  cuisine: string
+  rating: number
+  distanceKm: number
+  priceRange: number
+  reasons: string[]
+  address: string
+  imageUrl: string
+  latitude: number
+  longitude: number
+  id: string
+}
+
 export function Spin() {
   const location = useLocation()
   const { mood, budget, distanceKm } = useFilterStore()
   const [spinning, setSpinning] = useState(false)
-  const [result, setResult] = useState<{
-    name: string
-    cuisine: string
-    rating: number
-    distance: number
-    priceRange: number
-    reasons: string[]
-  } | null>(null)
+  const [result, setResult] = useState<SpinResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSpin = async () => {
     setSpinning(true)
     setResult(null)
+    setError(null)
 
     // Simulate spinning animation
     await new Promise(resolve => setTimeout(resolve, 2000))
 
-    // Mock result - in production this would call the API
-    const mockResult = {
-      name: 'Bakmi Orang Ketiga',
-      cuisine: 'Chinese',
-      rating: 4.7,
-      distance: 2.3,
-      priceRange: 1,
-      reasons: [
-        '🔥 Trending near you',
-        '❤️ You haven\'t tried it',
-        '💸 Within your budget',
-        '📍 Only 2.3 km away',
-        '🍜 You haven\'t had noodles in 12 days',
-      ]
+    try {
+      const res = await getApi().post<{ data: SpinResult }>('/roulette/spin', {
+        budget: budget || undefined,
+        distanceKm: distanceKm || undefined,
+        mood: mood || undefined,
+        latitude: -6.2088,
+        longitude: 106.8456,
+      })
+      setResult(res.data)
+    } catch (err: any) {
+      setError(err.message || 'Failed to spin')
+    } finally {
+      setSpinning(false)
     }
-
-    setResult(mockResult)
-    setSpinning(false)
   }
 
   return (
@@ -104,6 +110,13 @@ export function Spin() {
         </div>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
       {/* Spin Button */}
       {!result && (
         <motion.button
@@ -138,7 +151,7 @@ export function Spin() {
           <div className="space-y-2 mb-6">
             <div className="flex items-center gap-2 text-gray-600">
               <span>📍</span>
-              <span>{result.distance} km away</span>
+              <span>{result.distanceKm.toFixed(1)} km away</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <span>💰</span>

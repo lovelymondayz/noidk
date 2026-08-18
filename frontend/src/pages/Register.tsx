@@ -1,15 +1,32 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { authService } from '../services/auth'
+import { useAuthStore } from '../store/authStore'
 
 export function Register() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const { setAuth } = useAuthStore()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Register:', username, email, password)
+    setError('')
+    setLoading(true)
+
+    try {
+      const res = await authService.register(username, email, password)
+      setAuth(res.user, res.accessToken, res.refreshToken)
+      navigate('/')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -33,6 +50,12 @@ export function Register() {
         >
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Create account</h2>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-center">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
@@ -42,6 +65,7 @@ export function Register() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
                 placeholder="@username"
+                required
               />
             </div>
 
@@ -53,6 +77,7 @@ export function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
                 placeholder="you@example.com"
+                required
               />
             </div>
 
@@ -64,12 +89,14 @@ export function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
                 placeholder="••••••••"
+                required
+                minLength={6}
               />
             </div>
           </div>
 
-          <button type="submit" className="w-full btn-primary mt-6 text-lg">
-            Register
+          <button type="submit" disabled={loading} className="w-full btn-primary mt-6 text-lg disabled:opacity-50">
+            {loading ? 'Creating account...' : 'Register'}
           </button>
 
           <p className="text-center text-gray-500 mt-4">

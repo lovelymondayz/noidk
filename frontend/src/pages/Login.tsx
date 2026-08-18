@@ -1,15 +1,31 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { authService } from '../services/auth'
+import { useAuthStore } from '../store/authStore'
 
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const { setAuth } = useAuthStore()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement login
-    console.log('Login:', email, password)
+    setError('')
+    setLoading(true)
+
+    try {
+      const res = await authService.login(email, password)
+      setAuth(res.user, res.accessToken, res.refreshToken)
+      navigate('/')
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -33,6 +49,12 @@ export function Login() {
         >
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome back</h2>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-center">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -42,6 +64,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
                 placeholder="you@example.com"
+                required
               />
             </div>
 
@@ -53,12 +76,13 @@ export function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
                 placeholder="••••••••"
+                required
               />
             </div>
           </div>
 
-          <button type="submit" className="w-full btn-primary mt-6 text-lg">
-            Login
+          <button type="submit" disabled={loading} className="w-full btn-primary mt-6 text-lg disabled:opacity-50">
+            {loading ? 'Logging in...' : 'Login'}
           </button>
 
           <p className="text-center text-gray-500 mt-4">

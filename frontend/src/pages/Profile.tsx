@@ -1,6 +1,20 @@
 import { motion } from 'framer-motion'
+import { useAuthStore } from '../store/authStore'
 
 export function Profile() {
+  const { user, isAuthenticated, logout } = useAuthStore()
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12 flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-6xl">👤</span>
+          <p className="text-gray-500 mt-4">Please login to view your profile</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12">
       {/* Profile Header */}
@@ -14,9 +28,9 @@ export function Profile() {
             👤
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900">@mika</h1>
-            <p className="text-gray-500">Food Scout · Level 12</p>
-            <p className="text-sm text-orange-500 font-medium mt-1">🔥 348 XP this month</p>
+            <h1 className="text-2xl font-black text-gray-900">@{user.username}</h1>
+            <p className="text-gray-500">Food Scout · Level {user.level}</p>
+            <p className="text-sm text-orange-500 font-medium mt-1">🔥 {user.lifetimeXp} XP total</p>
           </div>
         </div>
       </motion.div>
@@ -38,43 +52,19 @@ export function Profile() {
         </div>
       </motion.div>
 
-      {/* Recent Eats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white rounded-2xl p-6 shadow-sm mb-6"
-      >
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Eats</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🍜</span>
-            <span className="text-gray-700">Bakmi Orang Ketiga</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🍣</span>
-            <span className="text-gray-700">Sushi Kaze</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xl">☕</span>
-            <span className="text-gray-700">Kopi & Co.</span>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Badges */}
+      {/* Logout */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
         className="bg-white rounded-2xl p-6 shadow-sm"
       >
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Badges</h2>
-        <div className="flex flex-wrap gap-3">
-          <span className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">🏆 Top Food Scout</span>
-          <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">📸 Photo Hunter</span>
-          <span className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">🍜 Noodle Expert</span>
-        </div>
+        <button
+          onClick={logout}
+          className="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition"
+        >
+          Logout
+        </button>
       </motion.div>
     </div>
   )

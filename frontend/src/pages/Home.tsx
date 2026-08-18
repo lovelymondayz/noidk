@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MoodFilter, BudgetFilter, DistanceFilter } from '../components/ui/Filters'
 import { useFilterStore } from '../store/filterStore'
+import { getApi } from '../services/api'
 
 const MOODS = [
   { emoji: '🍜', label: 'Comfort', value: 'comfort' },
@@ -28,9 +30,38 @@ const DISTANCES = [
   { emoji: '🌎', label: 'Anywhere', value: 50 },
 ]
 
+interface Restaurant {
+  id: string
+  name: string
+  cuisine: string
+  rating: number
+  reviewCount: number
+  priceRange: number
+  address: string
+  imageUrl: string
+  latitude: number
+  longitude: number
+}
+
 export function Home() {
   const navigate = useNavigate()
   const { mood, budget, distanceKm, setMood, setBudget, setDistance } = useFilterStore()
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const res = await getApi().get<{ data: { restaurants: Restaurant[] } }>('/restaurants?limit=10')
+        setRestaurants(res.data.restaurants)
+      } catch (err) {
+        console.error('Failed to fetch restaurants:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRestaurants()
+  }, [])
 
   const handleSpin = () => {
     navigate('/spin', { state: { mood, budget, distanceKm } })
@@ -100,6 +131,37 @@ export function Home() {
           <h3 className="text-sm font-semibold text-gray-500 mb-3">Distance</h3>
           <DistanceFilter distances={DISTANCES} selected={distanceKm} onSelect={setDistance} />
         </motion.div>
+      </div>
+
+      {/* Trending Restaurants */}
+      <div className="px-6 mt-8">
+        <h3 className="text-sm font-semibold text-gray-500 mb-3">🔥 Trending Near You</h3>
+        {loading ? (
+          <div className="text-center text-gray-400 py-8">Loading...</div>
+        ) : (
+          <div className="space-y-3">
+            {restaurants.slice(0, 5).map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4"
+              >
+                <div className="w-14 h-14 rounded-lg bg-orange-100 flex items-center justify-center text-2xl">
+                  🍽️
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">{r.name}</h4>
+                  <p className="text-sm text-gray-500">{r.cuisine} • {'💸'.repeat(r.priceRange)}</p>
+                </div>
+                <div className="flex items-center gap-1 bg-orange-100 px-2 py-1 rounded-full">
+                  <span className="text-orange-500 text-sm">⭐</span>
+                  <span className="font-bold text-orange-700 text-sm">{r.rating}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CTA */}
