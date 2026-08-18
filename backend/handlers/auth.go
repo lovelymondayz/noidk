@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lovelymondayz/noidk/backend/db"
 	"github.com/lovelymondayz/noidk/backend/utils"
 )
 

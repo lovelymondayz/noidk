@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"math"
 	"math/rand"
 	"net/http"
 	"time"
