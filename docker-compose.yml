@@ -43,7 +43,7 @@ services:
     build: ./frontend
     container_name: noidk-frontend
     ports:
-      - "3005:3005"
+      - "3008:3005"
     environment:
       VITE_API_URL: http://localhost:8085/api
     depends_on:
