@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: noidk-db
+    environment:
+      POSTGRES_USER: noidk
+      POSTGRES_PASSWORD: noidkpassword
+      POSTGRES_DB: noidk
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noidk -d noidk"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: noidk-backend
+    ports:
+      - "8085:8085"
+    environment:
+      APP_ENV: development
+      APP_PORT: 8085
+      DATABASE_URL: postgres://noidk:noidkpassword@db:5432/noidk?sslmode=disable
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      JWT_EXPIRY: 15
+      REFRESH_EXPIRY: 7
+      CORS_ORIGIN: http://localhost:3005
+      UPLOAD_DIR: /app/uploads
+      MAPS_PROVIDER: osm
+      STORAGE_PROVIDER: local
+      SEARCH_PROVIDER: postgres
+    volumes:
+      - ./backend:/app
+      - /app/tmp
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: noidk-frontend
+    ports:
+      - "3005:3005"
+    environment:
+      VITE_API_URL: http://localhost:8085/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

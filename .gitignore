@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build artifacts
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+
+# Docker
+docker-compose.override.yml
+
+# Temp
+tmp/
+*.tmp
