@@ -109,6 +109,50 @@ func (h *RestaurantHandler) Create(c *gin.Context) {
 	})
 }
 
+func (h *RestaurantHandler) FullSearch(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{"results": []interface{}{}, "query": ""}})
+		return
+	}
+
+	results, err := h.repo.FullSearch(c.Request.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"results": results,
+			"query":   query,
+		},
+	})
+}
+
+func (h *RestaurantHandler) MarkVisited(c *gin.Context) {
+	var req struct {
+		Rating      int  `json:"rating" binding:"required,min=1,max=5"`
+		WouldReturn bool `json:"wouldReturn"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "VALIDATION_ERROR", "message": err.Error()}})
+		return
+	}
+
+	// TODO: Get userID from JWT
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	restaurantID := uuid.MustParse(c.Param("id"))
+
+	if err := h.repo.MarkVisited(c.Request.Context(), userID, restaurantID, req.Rating, req.WouldReturn); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "INTERNAL_ERROR", "message": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"status": "ok"}})
+}
+
 func parseUUID(id string) uuid.UUID {
 	// In production, handle parse errors
 	return uuid.MustParse(id)

@@ -1,8 +1,21 @@
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
+import { useState, useEffect } from 'react'
+import { getApi } from '../services/api'
 
 export function Profile() {
   const { user, isAuthenticated, logout } = useAuthStore()
+  const [stats, setStats] = useState<any>(null)
+  const [visits, setVisits] = useState<any[]>([])
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      getApi().get<{ data: { stats: any, visits: any[] } }>(`/users/${user.id}`).then(res => {
+        setStats(res.data.stats)
+        setVisits(res.data.visits || [])
+      }).catch(() => {})
+    }
+  }, [isAuthenticated, user])
 
   if (!isAuthenticated || !user) {
     return (
@@ -17,7 +30,6 @@ export function Profile() {
 
   return (
     <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12">
-      {/* Profile Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -35,24 +47,52 @@ export function Profile() {
         </div>
       </motion.div>
 
-      {/* Favorite Cuisines */}
+      {stats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-4 mb-6"
+        >
+          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
+            <span className="text-2xl font-black text-orange-500">{stats.totalVisits}</span>
+            <p className="text-xs text-gray-500 mt-1">Visits</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
+            <span className="text-2xl font-black text-orange-500">{stats.cuisinesTried}</span>
+            <p className="text-xs text-gray-500 mt-1">Cuisines</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
+            <span className="text-2xl font-black text-orange-500">{stats.wouldReturnCount}</span>
+            <p className="text-xs text-gray-500 mt-1">Would Return</p>
+          </div>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.2 }}
         className="bg-white rounded-2xl p-6 shadow-sm mb-6"
       >
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Favorite Cuisines</h2>
-        <div className="flex flex-wrap gap-2">
-          {['🍣 Japanese', '🍜 Chinese', '☕ Coffee'].map((cuisine) => (
-            <span key={cuisine} className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-              {cuisine}
-            </span>
-          ))}
-        </div>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Eats</h2>
+        {visits.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">No visits yet. Start exploring!</p>
+        ) : (
+          <div className="space-y-3">
+            {visits.slice(0, 5).map(v => (
+              <div key={v.id} className="flex items-center gap-3">
+                <span className="text-xl">🍽️</span>
+                <div>
+                  <p className="font-medium text-gray-800">{v.name}</p>
+                  <p className="text-sm text-gray-500">{v.cuisine} • {v.visitedAt}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
-      {/* Logout */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

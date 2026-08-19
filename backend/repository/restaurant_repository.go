@@ -210,3 +210,53 @@ func (r *RestaurantRepository) Create(ctx context.Context, name, description, ad
 	}
 	return &id, nil
 }
+
+func (r *RestaurantRepository) FullSearch(ctx context.Context, query string) ([]map[string]interface{}, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, name, cuisine, rating, price_range, address, 'restaurant' as type
+		FROM restaurants
+		WHERE name ILIKE $1 OR cuisine ILIKE $1 OR address ILIKE $1
+		UNION ALL
+		SELECT mi.id, mi.name, r.cuisine, 0 as rating, r.price_range, r.address, 'menu_item' as type
+		FROM menu_items mi
+		JOIN restaurants r ON r.id = mi.restaurant_id
+		WHERE mi.name ILIKE $1 OR mi.description ILIKE $1
+		LIMIT 20
+	`, "%"+query+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var id uuid.UUID
+		var name, cuisine, address, resultType string
+		var rating float64
+		var priceRange int
+
+		err := rows.Scan(&id, &name, &cuisine, &rating, &priceRange, &address, &resultType)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, map[string]interface{}{
+			"id":         id,
+			"name":       name,
+			"cuisine":    cuisine,
+			"rating":     rating,
+			"priceRange": priceRange,
+			"address":    address,
+			"type":       resultType,
+		})
+	}
+	return results, nil
+}
+
+func (r *RestaurantRepository) MarkVisited(ctx context.Context, userID, restaurantID uuid.UUID, rating int, wouldReturn bool) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO visits (user_id, restaurant_id, visited_at, rating, would_return)
+		VALUES ($1, $2, NOW(), $3, $4)
+	`, userID, restaurantID, rating, wouldReturn)
+	return err
+}

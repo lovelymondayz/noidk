@@ -31,6 +31,7 @@ func main() {
 	restaurantHandler := handlers.NewRestaurantHandler()
 	postHandler := handlers.NewPostHandler()
 	rouletteHandler := handlers.NewRouletteHandler()
+	userHandler := handlers.NewUserHandler()
 
 	// Auth routes
 	r.POST("/api/auth/register", authHandler.Register)
@@ -43,6 +44,7 @@ func main() {
 	r.GET("/api/restaurants/search", restaurantHandler.Search)
 	r.POST("/api/restaurants", middleware.AuthRequired(), restaurantHandler.Create)
 	r.GET("/api/restaurants/:id", restaurantHandler.Get)
+	r.POST("/api/restaurants/:id/visit", middleware.AuthRequired(), restaurantHandler.MarkVisited)
 
 	// Post routes
 	r.GET("/api/posts", postHandler.List)
@@ -53,6 +55,15 @@ func main() {
 	// Roulette routes
 	r.POST("/api/roulette/spin", rouletteHandler.Spin)
 	r.POST("/api/roulette/dont-make-me-choose", rouletteHandler.DontMakeMeChoose)
+
+	// User routes
+	r.GET("/api/users/:id", userHandler.GetProfile)
+	r.GET("/api/users/:id/visits", userHandler.GetVisits)
+	r.GET("/api/users/:id/journey", userHandler.GetFoodJourney)
+	r.POST("/api/users/location", userHandler.UpdateLocation)
+
+	// Search routes
+	r.GET("/api/search", restaurantHandler.FullSearch)
 
 	log.Printf("🚀 NoIDK backend starting on :%s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {

@@ -6,6 +6,12 @@ import { Discover } from './pages/Discover'
 import { Activity } from './pages/Activity'
 import { Profile } from './pages/Profile'
 import { Login } from './pages/Login'
+import { Register } from './pages/Register'
+import { RestaurantDetail } from './pages/RestaurantDetail'
+import { DontMakeMeChoose } from './pages/DontMakeMeChoose'
+import { PostCreation } from './pages/PostCreation'
+import { Search } from './pages/Search'
+import { Onboarding } from './pages/Onboarding'
 
 function App() {
   return (
@@ -18,7 +24,12 @@ function App() {
           <Route path="/activity" element={<Activity />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<div className="p-8 text-center"><h1 className="text-2xl font-bold text-orange-500">Register</h1></div>} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/restaurants/:id" element={<RestaurantDetail />} />
+          <Route path="/dont-make-me-choose" element={<DontMakeMeChoose />} />
+          <Route path="/post" element={<PostCreation />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/onboarding" element={<Onboarding />} />
         </Routes>
         <BottomNav />
       </div>
