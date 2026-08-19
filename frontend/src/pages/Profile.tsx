@@ -2,28 +2,48 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { useState, useEffect } from 'react'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 export function Profile() {
   const { user, isAuthenticated, logout } = useAuthStore()
   const [stats, setStats] = useState<any>(null)
   const [visits, setVisits] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (isAuthenticated && user) {
       getApi().get<{ data: { stats: any, visits: any[] } }>(`/users/${user.id}`).then(res => {
         setStats(res.data.stats)
         setVisits(res.data.visits || [])
-      }).catch(() => {})
+      }).catch(() => {}).finally(() => setLoading(false))
+    } else {
+      setLoading(false)
     }
   }, [isAuthenticated, user])
 
   if (!isAuthenticated || !user) {
     return (
+      <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12">
+        <EmptyState
+          emoji="👤"
+          title="Not logged in"
+          description="Login or create an account to view your profile and food journey."
+          action={{ label: 'Login', onClick: () => window.location.href = '/login' }}
+        />
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
       <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12 flex items-center justify-center">
-        <div className="text-center">
-          <span className="text-6xl">👤</span>
-          <p className="text-gray-500 mt-4">Please login to view your profile</p>
-        </div>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="text-4xl"
+        >
+          👤
+        </motion.div>
       </div>
     )
   }
@@ -77,7 +97,12 @@ export function Profile() {
       >
         <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Eats</h2>
         {visits.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">No visits yet. Start exploring!</p>
+          <EmptyState
+            emoji="🍽️"
+            title="No eats yet"
+            description="Start exploring and marking restaurants as visited to build your food journey."
+            action={{ label: 'Discover Places', onClick: () => window.location.href = '/discover' }}
+          />
         ) : (
           <div className="space-y-3">
             {visits.slice(0, 5).map(v => (

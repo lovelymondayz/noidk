@@ -18,6 +18,7 @@ export function Onboarding() {
   const [step, setStep] = useState(0)
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
   const [selectedBudget, setSelectedBudget] = useState('')
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   const toggleCuisine = (c: string) => {
     setSelectedCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
@@ -26,6 +27,27 @@ export function Onboarding() {
   const handleNext = () => {
     if (step < STEPS.length - 1) setStep(step + 1)
     else navigate('/')
+  }
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('error')
+      return
+    }
+
+    setLocationStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // Could save to backend here
+        console.log('Location:', position.coords.latitude, position.coords.longitude)
+        setLocationStatus('success')
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        setLocationStatus('error')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    )
   }
 
   return (
@@ -87,7 +109,31 @@ export function Onboarding() {
             <div className="text-center py-8">
               <span className="text-6xl">📍</span>
               <p className="text-gray-600 mt-4">Enable location for better recommendations</p>
-              <button className="mt-4 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold">Allow Location</button>
+              {locationStatus === 'success' ? (
+                <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-xl text-sm font-medium">
+                  ✅ Location enabled!
+                </div>
+              ) : locationStatus === 'error' ? (
+                <div className="mt-4">
+                  <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm font-medium mb-3">
+                    ❌ Could not get location. Please enable location permissions.
+                  </div>
+                  <button
+                    onClick={handleGetLocation}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGetLocation}
+                  disabled={locationStatus === 'loading'}
+                  className="mt-4 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold disabled:opacity-50"
+                >
+                  {locationStatus === 'loading' ? '📡 Getting location...' : '📍 Allow Location'}
+                </button>
+              )}
             </div>
           )}
 

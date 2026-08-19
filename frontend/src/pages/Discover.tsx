@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 interface Post {
   id: string
@@ -52,9 +53,22 @@ export function Discover() {
       </motion.p>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-8">Loading...</div>
+        <div className="flex items-center justify-center py-16">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="text-4xl"
+          >
+            🔍
+          </motion.div>
+        </div>
       ) : posts.length === 0 ? (
-        <div className="text-center text-gray-400 py-8">No posts yet. Be the first!</div>
+        <EmptyState
+          emoji="🔍"
+          title="Nothing to discover yet"
+          description="Be the first to share a food experience! Post about your latest meal and inspire others."
+          action={{ label: 'Create Post', onClick: () => window.location.href = '/post' }}
+        />
       ) : (
         <div className="space-y-4">
           {posts.map((post, i) => (

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 interface SearchResult {
   id: string
@@ -18,16 +19,19 @@ export function Search() {
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
 
   useEffect(() => {
     if (query.length >= 2) {
       setLoading(true)
+      setSearched(true)
       getApi().get<{ data: { results: SearchResult[] } }>(`/search?q=${encodeURIComponent(query)}`)
         .then(res => setResults(res.data.results))
         .catch(() => setResults([]))
         .finally(() => setLoading(false))
     } else {
       setResults([])
+      setSearched(false)
     }
   }, [query])
 
@@ -59,20 +63,33 @@ export function Search() {
         />
       </div>
 
-      {loading && <div className="text-center text-gray-400 py-8">Searching...</div>}
-
-      {!loading && query.length < 2 && (
-        <div className="text-center text-gray-500 py-8">
-          <span className="text-4xl mb-4 block">🔍</span>
-          <p>Start typing to search</p>
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="text-4xl"
+          >
+            🔍
+          </motion.div>
         </div>
       )}
 
+      {!loading && query.length < 2 && (
+        <EmptyState
+          emoji="🔍"
+          title="Start typing"
+          description="Search for restaurants, dishes, cuisines, or users. Try 'sushi' or 'ramen'!"
+        />
+      )}
+
       {!loading && query.length >= 2 && results.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
-          <span className="text-4xl mb-4 block">😕</span>
-          <p>No results for "{query}"</p>
-        </div>
+        <EmptyState
+          emoji="😕"
+          title={`No results for "${query}"`}
+          description="Try a different search term or browse our trending restaurants."
+          action={{ label: 'Go Home', onClick: () => window.location.href = '/' }}
+        />
       )}
 
       <div className="space-y-3">

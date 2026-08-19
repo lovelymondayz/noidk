@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 interface Restaurant {
   id: string
@@ -58,8 +59,32 @@ export function RestaurantDetail() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-orange-50 flex items-center justify-center text-gray-400">Loading...</div>
-  if (!restaurant) return <div className="min-h-screen bg-orange-50 flex items-center justify-center text-gray-400">Restaurant not found</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="text-4xl"
+        >
+          🍽️
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (!restaurant) {
+    return (
+      <div className="min-h-screen bg-orange-50 pb-24 px-6 pt-12">
+        <EmptyState
+          emoji="😢"
+          title="Restaurant not found"
+          description="This restaurant may have been removed or doesn't exist."
+          action={{ label: 'Go Home', onClick: () => navigate('/') }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-orange-50 pb-24">
@@ -86,22 +111,30 @@ export function RestaurantDetail() {
 
       <div className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Menu</h2>
-        <div className="space-y-3">
-          {restaurant.menuItems.map(item => (
-            <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-gray-900">{item.name}</h3>
-                  <p className="text-sm text-gray-500">{item.description}</p>
-                </div>
-                <div className="text-right">
-                  {item.price && <span className="font-bold text-orange-600">Rp{item.price.toLocaleString()}</span>}
-                  {item.isPopular && <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Popular</span>}
+        {restaurant.menuItems.length === 0 ? (
+          <EmptyState
+            emoji="📋"
+            title="Menu not available"
+            description="This restaurant hasn't uploaded their menu yet. Be the first to add items!"
+          />
+        ) : (
+          <div className="space-y-3">
+            {restaurant.menuItems.map(item => (
+              <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{item.name}</h3>
+                    <p className="text-sm text-gray-500">{item.description}</p>
+                  </div>
+                  <div className="text-right">
+                    {item.price && <span className="font-bold text-orange-600">Rp{item.price.toLocaleString()}</span>}
+                    {item.isPopular && <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Popular</span>}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="p-6">

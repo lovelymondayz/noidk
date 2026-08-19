@@ -23,26 +23,26 @@
 
 | # | Feature | Description | Status |
 |---|---------|-------------|--------|
-| 1 | **Project scaffold** | Monorepo, Docker Compose, Makefile, update.sh, docs | ⬜ |
-| 2 | **Database schema** | All entities (users, restaurants, menu_items, posts, visits, contributions, votes, trend_signals, couples, groups, notifications) | ⬜ |
-| 3 | **Auth** | Register, login, JWT middleware, protected routes | ⬜ |
-| 4 | **Location** | GPS/location detection, distance calculations | ⬜ |
-| 5 | **Restaurant discovery** | List, filter (mood/budget/distance), full-text search, map view | ⬜ |
-| 6 | **Restaurant pages** | Detail, menu, community posts, votes, "would eat again" | ⬜ |
-| 7 | **Post creation** | Photos, menu items, review, tags, tips (social content unit) | ⬜ |
-| 8 | **🎲 Roulette / Spin** | Animated wheel, weighted by signals, cooldown + diversity logic | ⬜ |
-| 9 | **"Don't Make Me Choose"** | Guided Q&A → recommendation | ⬜ |
-| 10 | **Recommendation explanation** | "Why we picked this" UI with signal breakdown | ⬜ |
-| 11 | **Cooldown + Food diversity** | Prevent repeats, push variety | ⬜ |
-| 12 | **Restaurant history** | Visit tracking, "last visited X days ago" | ⬜ |
-| 13 | **User profiles** | Avatar, bio, level, XP, recent visits, food journey timeline | ⬜ |
-| 14 | **Search** | Restaurants, menu items, dishes, users, posts | ⬜ |
+| 1 | **Project scaffold** | Monorepo, Docker Compose, Makefile, update.sh, docs | ✅ |
+| 2 | **Database schema** | All entities (users, restaurants, menu_items, posts, visits, contributions, votes, trend_signals, couples, groups, notifications) | ✅ |
+| 3 | **Auth** | Register, login, JWT middleware, protected routes | ✅ |
+| 4 | **Location** | GPS/location detection, distance calculations | ✅ |
+| 5 | **Restaurant discovery** | List, filter (mood/budget/distance), full-text search, map view | ✅ |
+| 6 | **Restaurant pages** | Detail, menu, community posts, votes, "would eat again" | ✅ |
+| 7 | **Post creation** | Photos, menu items, review, tags, tips (social content unit) | ✅ |
+| 8 | **🎲 Roulette / Spin** | Animated wheel, weighted by signals, cooldown + diversity logic | ✅ |
+| 9 | **"Don't Make Me Choose"** | Guided Q&A → recommendation | ✅ |
+| 10 | **Recommendation explanation** | "Why we picked this" UI with signal breakdown | ✅ |
+| 11 | **Cooldown + Food diversity** | Prevent repeats, push variety | ✅ |
+| 12 | **Restaurant history** | Visit tracking, "last visited X days ago" | ✅ |
+| 13 | **User profiles** | Avatar, bio, level, XP, recent visits, food journey timeline | ✅ |
+| 14 | **Search** | Restaurants, menu items, dishes, users, posts | ✅ |
 | 15 | **Empty states** | Playful copy for every empty screen | ⬜ |
-| 16 | **Onboarding** | 5-step flow ending in "YOUR FIRST PICK" | ⬜ |
-| 17 | **UI shell** | Bottom nav (Home/Discover/Spin/Activity/Profile), responsive desktop | ⬜ |
-| 18 | **Seed data** | 30 restaurants, 50+ menu items, 5+ users, 20+ posts, reviews, visits, votes | ⬜ |
+| 16 | **Onboarding** | 5-step flow ending in "YOUR FIRST PICK" | ✅ |
+| 17 | **UI shell** | Bottom nav (Home/Discover/Spin/Activity/Profile), responsive desktop | ✅ |
+| 18 | **Seed data** | 30 restaurants, 50+ menu items, 5+ users, 20+ posts, reviews, visits, votes | ✅ |
 
-**Phase 1 Total:** ~18 features
+**Phase 1 Total:** ~18 features — **16/18 complete (89%)**
 
 ---
 
@@ -93,15 +93,15 @@
 
 ## Success Criteria
 
-- [ ] Roulette returns weighted, personalized results with explanation
-- [ ] Cooldown prevents repeats within configured days
-- [ ] Food diversity pushes varied cuisines
-- [ ] Search returns restaurants, menu items, users, posts
-- [ ] 30 realistic seed restaurants with images, menus, posts
-- [ ] Mobile-first responsive UI with bottom nav
-- [ ] Onboarding completes in under 30 seconds
+- [x] Roulette returns weighted, personalized results with explanation
+- [x] Cooldown prevents repeats within configured days
+- [x] Food diversity pushes varied cuisines
+- [x] Search returns restaurants, menu items, users, posts
+- [x] 30 realistic seed restaurants with images, menus, posts
+- [x] Mobile-first responsive UI with bottom nav
+- [x] Onboarding completes in under 30 seconds
 - [ ] Empty states have playful copy
-- [ ] Deployed live on noidk.client.arjism.com
+- [x] Deployed live on noidk.client.arjism.com
 
 ---
 
