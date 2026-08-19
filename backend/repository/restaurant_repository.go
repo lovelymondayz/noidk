@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"math"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/lovelymondayz/noidk/backend/db"
+	"github.com/lovelymondayz/noidk/backend/utils"
 )
 
 type RestaurantRepository struct{}
@@ -16,6 +18,12 @@ func NewRestaurantRepository() *RestaurantRepository {
 }
 
 func (r *RestaurantRepository) List(ctx context.Context, filters map[string]interface{}) ([]map[string]interface{}, int, error) {
+	// Extract location params
+	lat, hasLat := filters["latitude"].(float64)
+	lon, hasLon := filters["longitude"].(float64)
+	distanceKm, hasDistance := filters["distanceKm"].(float64)
+	hasLocation := hasLat && hasLon && lat != 0 && lon != 0
+
 	query := `
 		SELECT r.id, r.name, r.cuisine, r.price_range, r.rating, r.review_count, r.address, r.latitude, r.longitude, r.image_url,
 		       COUNT(DISTINCT v.id) as visit_count,
@@ -30,23 +38,23 @@ func (r *RestaurantRepository) List(ctx context.Context, filters map[string]inte
 
 	if cuisine, ok := filters["cuisine"].(string); ok && cuisine != "" {
 		argCount++
-		query += ` AND r.cuisine = $` + string(rune('0'+argCount))
+		query += " AND r.cuisine = $" + string(rune('0'+argCount))
 		args = append(args, cuisine)
 	}
 
 	if budget, ok := filters["budget"].(int); ok && budget > 0 {
 		argCount++
-		query += ` AND r.price_range <= $` + string(rune('0'+argCount))
+		query += " AND r.price_range <= $" + string(rune('0'+argCount))
 		args = append(args, budget)
 	}
 
 	if mood, ok := filters["mood"].(string); ok && mood != "" {
 		argCount++
-		query += ` AND r.atmosphere ILIKE $` + string(rune('0'+argCount))
+		query += " AND r.atmosphere ILIKE $" + string(rune('0'+argCount))
 		args = append(args, "%"+mood+"%")
 	}
 
-	query += ` GROUP BY r.id ORDER BY r.rating DESC, r.review_count DESC`
+	query += " GROUP BY r.id"
 
 	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -54,36 +62,88 @@ func (r *RestaurantRepository) List(ctx context.Context, filters map[string]inte
 	}
 	defer rows.Close()
 
-	var restaurants []map[string]interface{}
-	for rows.Next() {
-		var id uuid.UUID
-		var name, cuisine, address string
-		var priceRange int
-		var rating float64
-		var reviewCount int
-		var lat, lon float64
-		var imageURL *string
-		var visitCount, postCount int
+	type restaurantData struct {
+		id          uuid.UUID
+		name        string
+		cuisine     string
+		priceRange  int
+		rating      float64
+		reviewCount int
+		address     string
+		lat         float64
+		lon         float64
+		imageURL    *string
+		visitCount  int
+		postCount   int
+		distance    float64
+	}
 
-		err := rows.Scan(&id, &name, &cuisine, &priceRange, &rating, &reviewCount, &address, &lat, &lon, &imageURL, &visitCount, &postCount)
+	var allRestaurants []restaurantData
+	for rows.Next() {
+		var rd restaurantData
+		err := rows.Scan(&rd.id, &rd.name, &rd.cuisine, &rd.priceRange, &rd.rating, &rd.reviewCount, &rd.address, &rd.lat, &rd.lon, &rd.imageURL, &rd.visitCount, &rd.postCount)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		restaurants = append(restaurants, map[string]interface{}{
-			"id":          id,
-			"name":        name,
-			"cuisine":     cuisine,
-			"priceRange":  priceRange,
-			"rating":      rating,
-			"reviewCount": reviewCount,
-			"address":     address,
-			"latitude":    lat,
-			"longitude":   lon,
-			"imageUrl":    imageURL,
-			"visitCount":  visitCount,
-			"postCount":   postCount,
-		})
+		// Calculate distance if location provided
+		if hasLocation {
+			rd.distance = utils.Haversine(lat, lon, rd.lat, rd.lon)
+		}
+
+		// Filter by distance if specified
+		if hasLocation && hasDistance && distanceKm > 0 {
+			if rd.distance > distanceKm {
+				continue
+			}
+		}
+
+		allRestaurants = append(allRestaurants, rd)
+	}
+
+	// Sort: by distance if location available, then by rating
+	if hasLocation {
+		// Simple bubble sort by distance (ascending), then rating (descending)
+		for i := 0; i < len(allRestaurants); i++ {
+			for j := i + 1; j < len(allRestaurants); j++ {
+				ri, rj := allRestaurants[i], allRestaurants[j]
+				if rj.distance < ri.distance || (rj.distance == ri.distance && rj.rating > ri.rating) {
+					allRestaurants[i], allRestaurants[j] = allRestaurants[j], allRestaurants[i]
+				}
+			}
+		}
+	} else {
+		// Sort by rating descending
+		for i := 0; i < len(allRestaurants); i++ {
+			for j := i + 1; j < len(allRestaurants); j++ {
+				if allRestaurants[j].rating > allRestaurants[i].rating {
+					allRestaurants[i], allRestaurants[j] = allRestaurants[j], allRestaurants[i]
+				}
+			}
+		}
+	}
+
+	// Convert to map slice
+	var restaurants []map[string]interface{}
+	for _, rd := range allRestaurants {
+		r := map[string]interface{}{
+			"id":          rd.id,
+			"name":        rd.name,
+			"cuisine":     rd.cuisine,
+			"priceRange":  rd.priceRange,
+			"rating":      rd.rating,
+			"reviewCount": rd.reviewCount,
+			"address":     rd.address,
+			"latitude":    rd.lat,
+			"longitude":   rd.lon,
+			"imageUrl":    rd.imageURL,
+			"visitCount":  rd.visitCount,
+			"postCount":   rd.postCount,
+		}
+		if hasLocation {
+			r["distanceKm"] = utils.Round(rd.distance, 1)
+		}
+		restaurants = append(restaurants, r)
 	}
 
 	return restaurants, len(restaurants), nil

@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useFilterStore } from '../store/filterStore'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 const MOODS = [
   { emoji: '🍜', label: 'Comfort', value: 'comfort' },
@@ -31,10 +32,16 @@ interface SpinResult {
 
 export function Spin() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { mood, budget, distanceKm } = useFilterStore()
   const [spinning, setSpinning] = useState(false)
   const [result, setResult] = useState<SpinResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Get location from state or use Jakarta center as fallback
+  const loc = location.state as { lat?: number; lon?: number } | null
+  const userLat = loc?.lat || -6.2088
+  const userLon = loc?.lon || 106.8456
 
   const handleSpin = async () => {
     setSpinning(true)
@@ -49,8 +56,8 @@ export function Spin() {
         budget: budget || undefined,
         distanceKm: distanceKm || undefined,
         mood: mood || undefined,
-        latitude: -6.2088,
-        longitude: 106.8456,
+        latitude: userLat,
+        longitude: userLon,
       })
       setResult(res.data)
     } catch (err: any) {
@@ -179,7 +186,10 @@ export function Spin() {
 
           {/* Actions */}
           <div className="flex gap-3 mt-6">
-            <button className="flex-1 btn-primary">
+            <button
+              onClick={() => navigate(`/restaurants/${result.id}`)}
+              className="flex-1 btn-primary"
+            >
               LET'S GO →
             </button>
             <button

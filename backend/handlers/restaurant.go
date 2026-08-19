@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,10 +26,25 @@ func (h *RestaurantHandler) List(c *gin.Context) {
 		filters["cuisine"] = cuisine
 	}
 	if budget := c.Query("budget"); budget != "" {
-		filters["budget"] = budget
+		if b, err := strconv.Atoi(budget); err == nil {
+			filters["budget"] = b
+		}
 	}
 	if mood := c.Query("mood"); mood != "" {
 		filters["mood"] = mood
+	}
+
+	// Location-based filtering
+	lat, latErr := strconv.ParseFloat(c.Query("lat"), 64)
+	lon, lonErr := strconv.ParseFloat(c.Query("lon"), 64)
+	dist, distErr := strconv.ParseFloat(c.Query("dist"), 64)
+
+	if latErr == nil && lonErr == nil {
+		filters["latitude"] = lat
+		filters["longitude"] = lon
+		if distErr == nil && dist > 0 {
+			filters["distanceKm"] = dist
+		}
 	}
 
 	restaurants, total, err := h.repo.List(c.Request.Context(), filters)

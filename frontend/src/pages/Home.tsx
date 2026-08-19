@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { MoodFilter, BudgetFilter, DistanceFilter } from '../components/ui/Filters'
 import { useFilterStore } from '../store/filterStore'
 import { getApi } from '../services/api'
+import { EmptyState } from '../components/ui/EmptyState'
 
 const MOODS = [
   { emoji: '🍜', label: 'Comfort', value: 'comfort' },
@@ -41,6 +42,7 @@ interface Restaurant {
   imageUrl: string
   latitude: number
   longitude: number
+  distanceKm?: number
 }
 
 export function Home() {
@@ -48,23 +50,61 @@ export function Home() {
   const { mood, budget, distanceKm, setMood, setBudget, setDistance } = useFilterStore()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null)
 
+  // Request location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus('error')
+      return
+    }
+
+    setLocationStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        })
+        setLocationStatus('success')
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        setLocationStatus('error')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    )
+  }, [])
+
+  // Fetch restaurants when location changes or filters change
   useEffect(() => {
     const fetchRestaurants = async () => {
+      setLoading(true)
       try {
-        const res = await getApi().get<{ data: { restaurants: Restaurant[] } }>('/restaurants?limit=10')
-        setRestaurants(res.data.restaurants)
+        const params = new URLSearchParams()
+        if (mood) params.set('mood', mood)
+        if (budget) params.set('budget', budget.toString())
+        if (distanceKm) params.set('dist', distanceKm.toString())
+        if (userLocation) {
+          params.set('lat', userLocation.lat.toString())
+          params.set('lon', userLocation.lon.toString())
+        }
+
+        const res = await getApi().get<{ data: { restaurants: Restaurant[] } }>(`/restaurants?${params.toString()}`)
+        setRestaurants(res.data.restaurants || [])
       } catch (err) {
         console.error('Failed to fetch restaurants:', err)
+        setRestaurants([])
       } finally {
         setLoading(false)
       }
     }
     fetchRestaurants()
-  }, [])
+  }, [mood, budget, distanceKm, userLocation])
 
   const handleSpin = () => {
-    navigate('/spin', { state: { mood, budget, distanceKm } })
+    navigate('/spin', { state: { mood, budget, distanceKm, lat: userLocation?.lat, lon: userLocation?.lon } })
   }
 
   return (
@@ -86,6 +126,38 @@ export function Home() {
         >
           Don't think. We'll pick.
         </motion.p>
+
+        {/* Location Status */}
+        {locationStatus === 'loading' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium mb-4"
+          >
+            <span className="animate-spin">📡</span>
+            <span>Finding your location...</span>
+          </motion.div>
+        )}
+        {locationStatus === 'success' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4"
+          >
+            <span>📍</span>
+            <span>Showing restaurants near you</span>
+          </motion.div>
+        )}
+        {locationStatus === 'error' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm font-medium mb-4"
+          >
+            <span>🌎</span>
+            <span>Showing all restaurants (location unavailable)</span>
+          </motion.div>
+        )}
 
         {/* Contextual Greeting */}
         <motion.div
@@ -135,16 +207,31 @@ export function Home() {
 
       {/* Trending Restaurants */}
       <div className="px-6 mt-8">
-        <h3 className="text-sm font-semibold text-gray-500 mb-3">🔥 Trending Near You</h3>
+        <h3 className="text-sm font-semibold text-gray-500 mb-3">🔥 Near You</h3>
         {loading ? (
-          <div className="text-center text-gray-400 py-8">Loading...</div>
+          <div className="flex items-center justify-center py-8">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="text-4xl"
+            >
+              🍽️
+            </motion.div>
+          </div>
+        ) : restaurants.length === 0 ? (
+          <EmptyState
+            emoji="🔍"
+            title="No restaurants found"
+            description="Try adjusting your filters or expanding your distance range."
+          />
         ) : (
           <div className="space-y-3">
-            {restaurants.slice(0, 5).map((r) => (
+            {restaurants.slice(0, 5).map((r, i) => (
               <motion.div
                 key={r.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * i }}
                 className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4"
               >
                 <div className="w-14 h-14 rounded-lg bg-orange-100 flex items-center justify-center text-2xl">
@@ -153,6 +240,9 @@ export function Home() {
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900">{r.name}</h4>
                   <p className="text-sm text-gray-500">{r.cuisine} • {'💸'.repeat(r.priceRange)}</p>
+                  {r.distanceKm !== undefined && (
+                    <p className="text-xs text-orange-500 font-medium">📍 {r.distanceKm} km away</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 bg-orange-100 px-2 py-1 rounded-full">
                   <span className="text-orange-500 text-sm">⭐</span>
