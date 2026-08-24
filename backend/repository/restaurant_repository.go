@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"math"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
