@@ -1,47 +1,32 @@
-# NoIDK Makefile
+.PHONY: dev build up down logs clean deploy
 
-.PHONY: dev build down logs migrate seed test deploy clean
-
-# Development
+# Start development environment
 dev:
-	docker compose up --build
+	cd backend && go run . &
+	cd frontend && npm run dev
+	@echo "Backend: http://localhost:8085 | Frontend: http://localhost:3008"
 
+# Production build
 build:
-	docker compose build
+	cd frontend && npm ci && npm run build
+	cd backend && go build -o noidk-api .
+	@echo "Build complete"
+
+# Docker operations
+up:
+	docker compose up -d --build
+	@echo "Noidk running — FE: http://localhost:3008, BE: http://localhost:8085"
 
 down:
 	docker compose down
 
+# Utility
 logs:
 	docker compose logs -f
 
-# Database
-migrate:
-	docker compose exec -T backend go run db/migrate.go
-
-seed:
-	docker compose exec -T backend go run db/seed.go
-
-# Testing
-test:
-	docker compose exec -T backend go test ./...
-	docker compose exec -T frontend npm test
-
-# Production deploy
-deploy:
-	bash scripts/update.sh
-
-# Cleanup
 clean:
-	docker compose down -v --rmi all
-	docker system prune -f
+	docker compose down -v
+	rm -rf frontend/dist backend/noidk-api
 
-# Helpers
-shell-be:
-	docker compose exec backend sh
-
-shell-fe:
-	docker compose exec frontend sh
-
-shell-db:
-	docker compose exec db psql -U noidk -d noidk
+deploy:
+	./update.sh
